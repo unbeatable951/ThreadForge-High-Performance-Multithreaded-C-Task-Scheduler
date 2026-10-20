@@ -1,0 +1,5 @@
+#include "test_framework.hpp"
+
+int main() {
+    return testfw::run_all_tests();
+}
