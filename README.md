@@ -17,34 +17,34 @@
 ## Architecture Overview
 
 ```mermaid
-graph TD
-    Client["Client / User Application"] -->|submit()| Router{"Submission Router"}
+flowchart TD
+    Client["Client / User Application"] -->|"submit()"| Router{"Submission Router"}
 
-    subgraph "ThreadForge Concurrency Core"
-        Router -->|External Thread| GlobalQ[("Global Injector Queue<br/>(std::mutex + CV)")]
-        Router -->|Worker Thread| LocalQ1[("Worker 0 Deque<br/>(LIFO Local / FIFO Steal)")]
-        Router -->|Worker Thread| LocalQ2[("Worker 1 Deque<br/>(LIFO Local / FIFO Steal)")]
+    subgraph Core ["ThreadForge Concurrency Core"]
+        Router -->|"External Thread"| GlobalQ["Global Injector Queue (std::mutex + CV)"]
+        Router -->|"Worker Thread"| LocalQ1["Worker 0 Deque (LIFO Local / FIFO Steal)"]
+        Router -->|"Worker Thread"| LocalQ2["Worker 1 Deque (LIFO Local / FIFO Steal)"]
 
-        W0["Worker Thread 0"] <-->|Push/Pop| LocalQ1
-        W1["Worker Thread 1"] <-->|Push/Pop| LocalQ2
+        W0["Worker Thread 0"] <-->|"Push / Pop"| LocalQ1
+        W1["Worker Thread 1"] <-->|"Push / Pop"| LocalQ2
 
-        W0 -.->|Steal Oldest (FIFO)| LocalQ2
-        W1 -.->|Steal Oldest (FIFO)| LocalQ1
+        W0 -.->|"Steal Oldest (FIFO)"| LocalQ2
+        W1 -.->|"Steal Oldest (FIFO)"| LocalQ1
 
-        W0 -.->|Drain when idle| GlobalQ
-        W1 -.->|Drain when idle| GlobalQ
+        W0 -.->|"Drain when idle"| GlobalQ
+        W1 -.->|"Drain when idle"| GlobalQ
     end
 
-    subgraph "DAG Engine"
+    subgraph DAGEngine ["DAG Engine"]
         DAG["TaskGraph Pipeline"]
-        TopSort["Cycle Detector (Kahn's TopoSort)"]
+        TopSort["Cycle Detector (Kahns TopoSort)"]
         AtomicInDeg["Atomic In-Degree Resolution"]
-        DAG --> TopSort --> AtomicInDeg -->|Ready Tasks| Router
+        DAG --> TopSort --> AtomicInDeg -->|"Ready Tasks"| Router
     end
 
-    subgraph "False-Sharing Immune Metrics"
-        M0[("Worker 0 Stats: alignas(64)")]
-        M1[("Worker 1 Stats: alignas(64)")]
+    subgraph MetricsSystem ["False-Sharing Immune Metrics"]
+        M0["Worker 0 Stats: alignas(64)"]
+        M1["Worker 1 Stats: alignas(64)"]
         W0 --> M0
         W1 --> M1
     end
